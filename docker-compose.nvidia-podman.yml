@@ -1,0 +1,9 @@
+services:
+  tts-story:
+    devices:
+      - ${NVIDIA_CDI_DEVICE:-nvidia.com/gpu=all}
+    security_opt:
+      - label=disable
+    environment:
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}

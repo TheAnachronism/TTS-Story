@@ -1,0 +1,38 @@
+x-tts-story-common: &tts-story-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: tts-story:latest
+  init: true
+  restart: unless-stopped
+  shm_size: "2gb"
+  ports:
+    - "5000:5000"
+  environment:
+    PYTHONUNBUFFERED: "1"
+    HF_HOME: /app/.cache/huggingface
+    TRANSFORMERS_CACHE: /app/.cache/huggingface/hub
+    TORCH_HOME: /app/.cache/torch
+    XDG_CACHE_HOME: /app/.cache
+    MPLCONFIGDIR: /app/.cache/matplotlib
+    HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
+    HF_TOKEN: ${HF_TOKEN:-}
+  volumes:
+    - ./config.json:/app/config.json
+    - ./data:/app/data
+    - ./static/audio:/app/static/audio
+    - ./static/samples:/app/static/samples
+    - ./models:/app/models
+    - ./engines:/app/engines
+    - ./.cache:/app/.cache
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5000/api/health || exit 1"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 60s
+
+services:
+  tts-story:
+    <<: *tts-story-common
+    container_name: tts-story
