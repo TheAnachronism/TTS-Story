@@ -69,6 +69,7 @@ data/external_voices_cache.json
 sync_to_repo.py
 sync-to-git.bat
 config.json.syncbak
+config.json
 
 # Sync state
 .sync_state.json
