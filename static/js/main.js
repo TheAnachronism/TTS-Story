@@ -280,7 +280,7 @@ const HELP_TOPICS = {
         body: `
             <p>Use an LLM to clean text, add punctuation, and build speaker profiles.</p>
             <ul>
-                <li><strong>Provider:</strong> Gemini cloud or local LM Studio/Ollama.</li>
+                <li><strong>Provider:</strong> Gemini cloud, LM Studio, Ollama, or OpenRouter.</li>
                 <li><strong>API Key / Model:</strong> Required for cloud usage.</li>
                 <li><strong>Local Settings:</strong> Base URL, model name, and timeout.</li>
                 <li><strong>Prompt Prefix:</strong> Instructions for text prep.</li>

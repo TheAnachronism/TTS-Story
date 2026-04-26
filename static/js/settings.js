@@ -8,7 +8,14 @@ const geminiPresetState = {
 
 const LOCAL_LLM_BASE_URLS = {
     lmstudio: 'http://localhost:1234/v1',
-    ollama: 'http://localhost:11434'
+    ollama: 'http://localhost:11434',
+    openrouter: 'https://openrouter.ai/api/v1'
+};
+
+const LOCAL_LLM_PROVIDER_LABELS = {
+    lmstudio: 'LM Studio',
+    ollama: 'Ollama',
+    openrouter: 'OpenRouter'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,14 +50,15 @@ async function fetchLocalLlmModels(buttonEl) {
     const baseUrl = baseUrlInput.value.trim();
     const apiKey = apiKeyInput?.value?.trim() || '';
     const timeout = parseInt(timeoutInput?.value, 10) || 30;
+    const providerLabel = LOCAL_LLM_PROVIDER_LABELS[provider] || 'provider';
 
     const originalLabel = buttonEl ? buttonEl.textContent : '';
     if (buttonEl) {
         buttonEl.disabled = true;
-        buttonEl.textContent = 'Fetching local models...';
+        buttonEl.textContent = 'Fetching models...';
     }
     if (statusEl) {
-        statusEl.textContent = 'Contacting local LLM server...';
+        statusEl.textContent = `Contacting ${providerLabel}...`;
     }
 
     try {
@@ -74,7 +82,7 @@ async function fetchLocalLlmModels(buttonEl) {
 
         const models = data.models || [];
         if (!models.length) {
-            throw new Error('No local models were returned. Verify the server is running.');
+            throw new Error(`No models were returned by ${providerLabel}.`);
         }
 
         const previousValue = (modelSelect.value || '').trim();
@@ -93,17 +101,17 @@ async function fetchLocalLlmModels(buttonEl) {
         }
 
         if (statusEl) {
-            statusEl.textContent = `Loaded ${models.length} local models.`;
+            statusEl.textContent = `Loaded ${models.length} models from ${providerLabel}.`;
         }
     } catch (error) {
-        console.error('Failed to fetch local LLM models:', error);
+        console.error(`Failed to fetch models from ${providerLabel}:`, error);
         if (statusEl) {
-            statusEl.textContent = error.message || 'Unable to fetch local models.';
+            statusEl.textContent = error.message || 'Unable to fetch models.';
         }
     } finally {
         if (buttonEl) {
             buttonEl.disabled = false;
-            buttonEl.textContent = originalLabel || 'Fetch Local Models';
+            buttonEl.textContent = originalLabel || 'Fetch Models';
         }
     }
 }

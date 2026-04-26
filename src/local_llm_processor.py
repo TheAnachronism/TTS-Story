@@ -1,4 +1,4 @@
-"""Helper for interacting with local LLM servers (LM Studio or Ollama)."""
+"""Helper for interacting with OpenAI-compatible and local LLM providers."""
 
 from __future__ import annotations
 
@@ -9,12 +9,18 @@ import requests
 
 LLM_PROVIDER_LMSTUDIO = "lmstudio"
 LLM_PROVIDER_OLLAMA = "ollama"
+LLM_PROVIDER_OPENROUTER = "openrouter"
 
-SUPPORTED_LOCAL_LLM_PROVIDERS = [LLM_PROVIDER_LMSTUDIO, LLM_PROVIDER_OLLAMA]
+SUPPORTED_LOCAL_LLM_PROVIDERS = [
+    LLM_PROVIDER_LMSTUDIO,
+    LLM_PROVIDER_OLLAMA,
+    LLM_PROVIDER_OPENROUTER,
+]
 
 DEFAULT_LOCAL_LLM_BASE_URLS = {
     LLM_PROVIDER_LMSTUDIO: "http://localhost:1234/v1",
     LLM_PROVIDER_OLLAMA: "http://localhost:11434",
+    LLM_PROVIDER_OPENROUTER: "https://openrouter.ai/api/v1",
 }
 
 
@@ -23,7 +29,7 @@ class LocalLLMProcessorError(RuntimeError):
 
 
 class LocalLLMProcessor:
-    """Wrapper for local LLM providers."""
+    """Wrapper for OpenAI-compatible and local LLM providers."""
 
     def __init__(
         self,
@@ -41,10 +47,10 @@ class LocalLLMProcessor:
     ) -> None:
         provider = (provider or "").lower().strip()
         if provider not in SUPPORTED_LOCAL_LLM_PROVIDERS:
-            raise LocalLLMProcessorError(f"Unsupported local LLM provider: {provider}")
+            raise LocalLLMProcessorError(f"Unsupported LLM provider: {provider}")
 
         if not model_name:
-            raise LocalLLMProcessorError("Local LLM model name is required")
+            raise LocalLLMProcessorError("LLM model name is required")
 
         self.provider = provider
         self.model_name = model_name
@@ -59,20 +65,22 @@ class LocalLLMProcessor:
         self.disable_reasoning = disable_reasoning
 
         if not self.base_url:
-            raise LocalLLMProcessorError("Local LLM base URL is required")
+            raise LocalLLMProcessorError("LLM base URL is required")
+        if self.provider == LLM_PROVIDER_OPENROUTER and not self.api_key:
+            raise LocalLLMProcessorError("OpenRouter API key is required")
 
     def generate_text(self, prompt: str) -> str:
         """Send prompt to local LLM and return the text response."""
         if not prompt.strip():
             raise LocalLLMProcessorError("Prompt must not be empty")
 
-        if self.provider == LLM_PROVIDER_LMSTUDIO:
+        if self.provider in (LLM_PROVIDER_LMSTUDIO, LLM_PROVIDER_OPENROUTER):
             return self._generate_openai_compatible(prompt)
 
         if self.provider == LLM_PROVIDER_OLLAMA:
             return self._generate_ollama(prompt)
 
-        raise LocalLLMProcessorError(f"Unsupported local LLM provider: {self.provider}")
+        raise LocalLLMProcessorError(f"Unsupported LLM provider: {self.provider}")
 
     def _normalize_openai_base(self) -> str:
         base = self.base_url.rstrip("/")
@@ -99,13 +107,16 @@ class LocalLLMProcessor:
     ) -> List[str]:
         provider = (provider or "").lower().strip()
         if provider not in SUPPORTED_LOCAL_LLM_PROVIDERS:
-            raise LocalLLMProcessorError(f"Unsupported local LLM provider: {provider}")
+            raise LocalLLMProcessorError(f"Unsupported LLM provider: {provider}")
 
         resolved_base = base_url or DEFAULT_LOCAL_LLM_BASE_URLS.get(provider, "")
         if not resolved_base:
-            raise LocalLLMProcessorError("Local LLM base URL is required")
+            raise LocalLLMProcessorError("LLM base URL is required")
 
-        if provider == LLM_PROVIDER_LMSTUDIO:
+        if provider == LLM_PROVIDER_OPENROUTER and not (api_key or "").strip():
+            raise LocalLLMProcessorError("OpenRouter API key is required")
+
+        if provider in (LLM_PROVIDER_LMSTUDIO, LLM_PROVIDER_OPENROUTER):
             url = f"{cls._normalize_openai_base_url(resolved_base)}/models"
             headers = {"Content-Type": "application/json"}
             if api_key:
@@ -124,7 +135,8 @@ class LocalLLMProcessor:
             data = response.json() if response.content else {}
             models = [entry.get("id") for entry in data.get("data", []) if entry.get("id")]
             if not models:
-                raise LocalLLMProcessorError("No LM Studio models were returned")
+                provider_name = "OpenRouter" if provider == LLM_PROVIDER_OPENROUTER else "LM Studio"
+                raise LocalLLMProcessorError(f"No {provider_name} models were returned")
             return sorted(models)
 
         if provider == LLM_PROVIDER_OLLAMA:
@@ -146,7 +158,7 @@ class LocalLLMProcessor:
                 raise LocalLLMProcessorError("No Ollama models were returned")
             return sorted(models)
 
-        raise LocalLLMProcessorError(f"Unsupported local LLM provider: {provider}")
+        raise LocalLLMProcessorError(f"Unsupported LLM provider: {provider}")
 
     def _generate_openai_compatible(self, prompt: str) -> str:
         url = f"{self._normalize_openai_base()}/chat/completions"
@@ -162,13 +174,13 @@ class LocalLLMProcessor:
             payload["temperature"] = float(self.temperature)
         if self.top_p is not None:
             payload["top_p"] = float(self.top_p)
-        if self.top_k is not None and int(self.top_k) > 0:
+        if self.provider == LLM_PROVIDER_LMSTUDIO and self.top_k is not None and int(self.top_k) > 0:
             payload["top_k"] = int(self.top_k)
-        if self.repeat_penalty is not None:
+        if self.provider == LLM_PROVIDER_LMSTUDIO and self.repeat_penalty is not None:
             payload["repeat_penalty"] = float(self.repeat_penalty)
         if self.max_tokens is not None and int(self.max_tokens) > 0:
             payload["max_tokens"] = int(self.max_tokens)
-        if self.disable_reasoning:
+        if self.provider == LLM_PROVIDER_LMSTUDIO and self.disable_reasoning:
             payload["reasoning"] = {"enabled": False}
 
         try:

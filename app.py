@@ -2743,7 +2743,7 @@ def compose_gemini_prompt(section: dict, prompt_prefix: str = "", known_speakers
 
 
 def _run_llm_prompt(prompt: str, config: Dict[str, Any]) -> str:
-    """Run a prompt through the configured LLM provider (Gemini or local)."""
+    """Run a prompt through the configured LLM provider."""
     provider = (config.get("llm_provider") or DEFAULT_LLM_PROVIDER).lower().strip()
     if provider == "gemini":
         api_key = (config.get("gemini_api_key") or "").strip()
@@ -6370,7 +6370,7 @@ def list_gemini_models():
 
 @app.route('/api/local-llm/models', methods=['POST'])
 def list_local_llm_models():
-    """List available local LLM models for LM Studio/Ollama."""
+    """List available models for the configured non-Gemini provider."""
     try:
         data = request.json or {}
         config = load_config()
@@ -6401,10 +6401,10 @@ def list_local_llm_models():
             "error": str(exc)
         }), 400
     except Exception as exc:  # pragma: no cover - general failure
-        logger.error("Error listing local LLM models: %s", exc, exc_info=True)
+        logger.error("Error listing provider models: %s", exc, exc_info=True)
         return jsonify({
             "success": False,
-            "error": "Failed to list local LLM models"
+            "error": "Failed to list provider models"
         }), 500
 
 
